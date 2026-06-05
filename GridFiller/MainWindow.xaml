@@ -1,0 +1,147 @@
+﻿<Window x:Class="GridFiller.MainWindow"
+        x:Name="window"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:GridFiller"
+        mc:Ignorable="d"
+        Title="SnakeWPF - Puntuación: 0" SizeToContent="WidthAndHeight" ContentRendered="Window_ContentRendered" KeyUp="Window_KeyUp"     ResizeMode="NoResize" WindowStyle="None" Background="Black" MouseDown="Window_MouseDown">
+
+    <Window.Resources>
+        <!--
+            CollectionViewSource para enlazar la lista de récords (HighscoreList) a un ItemsControl.
+            Nota: Ordenar (SortDescriptions) no se puede establecer fácilmente desde XAML para colecciones en ViewModel;
+            la ordenación se realiza en el code-behind (ver ReorderHighscores()).
+        -->
+        <CollectionViewSource Source="{Binding ElementName=window, Path=HighscoreList}" x:Key="HighScoreListViewSource"/>
+    </Window.Resources>
+
+    <DockPanel Background="Black">
+        <!-- Barra superior: muestra título, puntuación y velocidad -->
+        <Border DockPanel.Dock="Top" Padding="8" Background="#001018" BorderBrush="#002233" BorderThickness="0,0,0,1">
+            <Grid Name="pnlTitleBar" VerticalAlignment="Center">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Título y subtítulo -->
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Grid.Column="0" Margin="8,0">
+                    <TextBlock Text="SnakeWPF" FontFamily="Consolas" FontSize="22" FontWeight="Bold" Foreground="#E0FFFF"/>
+                    <TextBlock Text="  -" FontFamily="Consolas" FontSize="22" FontWeight="Bold" Foreground="#444"/>
+                    <TextBlock Text=" Grid Fille" FontFamily="Consolas" FontSize="14" VerticalAlignment="Bottom" Foreground="#99D" Margin="6,0,0,0"/>
+                </StackPanel>
+
+                <!-- Centro vacío: espacio para futuros elementos (nivel, iconos...) -->
+                <StackPanel Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <!-- vacío intencional -->
+                </StackPanel>
+
+                <!-- Panel de estado: tarjetas con puntuación y velocidad y botón de cerrar -->
+                <StackPanel Orientation="Horizontal" Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,8,0">
+                    <!-- Tarjeta puntuación -->
+                    <Border CornerRadius="6" Padding="6" Background="#0B0B0B" BorderBrush="#00FFFF" BorderThickness="1" Width="140" Margin="0,0,8,0">
+                        <StackPanel>
+                            <TextBlock Text="Puntuación" FontFamily="Consolas" FontSize="12" Foreground="#88FFFF" HorizontalAlignment="Center"/>
+                            <!-- tbStatusScore se actualiza desde code-behind -->
+                            <TextBlock Name="tbStatusScore" Text="0" FontFamily="Consolas" FontSize="22" FontWeight="Bold" Foreground="Black" HorizontalAlignment="Center">
+                                <TextBlock.Effect>
+                                    <DropShadowEffect Color="#FFFFFF" BlurRadius="12" ShadowDepth="0" Opacity="0.9"/>
+                                </TextBlock.Effect>
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Tarjeta velocidad -->
+                    <Border CornerRadius="6" Padding="6" Background="#0B0B0B" BorderBrush="#7CFFB2" BorderThickness="1" Width="140" Margin="0,0,8,0">
+                        <StackPanel>
+                            <TextBlock Text="Velocidad (ms)" FontFamily="Consolas" FontSize="12" Foreground="#BFFFD8" HorizontalAlignment="Center"/>
+                            <!-- tbStatusSpeed se actualiza desde code-behind -->
+                            <TextBlock Name="tbStatusSpeed" Text="0" FontFamily="Consolas" FontSize="22" FontWeight="Bold" Foreground="Black" HorizontalAlignment="Center">
+                                <TextBlock.Effect>
+                                    <DropShadowEffect Color="#7CFFB2" BlurRadius="12" ShadowDepth="0" Opacity="0.9"/>
+                                </TextBlock.Effect>
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Botón cerrar: llamará a BtnClose_Click en code-behind -->
+                    <Button Background="Transparent" Foreground="White" FontWeight="Bold" FontSize="18" BorderThickness="0" Name="btnClose" Click="BtnClose_Click" Padding="8,2" Margin="6,0">X</Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border BorderBrush="Black" BorderThickness="5">
+            <!-- Área de juego principal: un Canvas con tamaño fijo aquí (400x400).
+                 El contenido del juego se dibuja dinámicamente desde code-behind (rectángulos para la serpiente). -->
+            <Canvas Name="GameArea" ClipToBounds="True" Width="400" Height="400" Background="White">
+                <!-- bdrMainMenu: menú principal que aparece al inicio -->
+                <Border BorderBrush="Silver" BorderThickness="2" Width="300" Height="300" Canvas.Left="50" Canvas.Top="50" Name="bdrMainMenu" Panel.ZIndex="2" Visibility="Visible">
+                    <StackPanel Orientation="Vertical" Background="AliceBlue" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <TextBlock FontWeight="Bold" FontSize="48" HorizontalAlignment="Center" Margin="0,20,0,0">SnakeWPF</TextBlock>
+                        <TextBlock TextWrapping="Wrap" Margin="20" FontSize="16" TextAlignment="Center">Juego de lógica y estrategia: cubre la mayor cantidad posible de la cuadrícula sin chocar.</TextBlock>
+                        <Button Margin="8" Name="btnAccept" Click="BtnAccept_Click" HorizontalAlignment="Center" Padding="12,6">Jugar</Button>
+                        <!-- Botón para ver récords -->
+                        <Button Margin="8" Name="btnViewHighscores" Click="BtnViewHighscores_Click" HorizontalAlignment="Center" Padding="12,6">Ver récords</Button>
+                    </StackPanel>
+                </Border>
+
+                <!-- Mensaje de bienvenida con instrucciones -->
+                <Border BorderBrush="Silver" BorderThickness="2" Width="300" Height="300" Canvas.Left="50" Canvas.Top="50" Name="bdrWelcomeMessage" Panel.ZIndex="1">
+                    <StackPanel Orientation="Vertical" Background="AliceBlue">
+                        <TextBlock FontWeight="Bold" FontSize="50" HorizontalAlignment="Center" Margin="0,20,0,0">SnakeWPF</TextBlock>
+                        <TextBlock TextWrapping="Wrap" Margin="20" FontSize="16">Usa las teclas de flecha para controlar la serpiente. Evita chocar contra las paredes o contra su propio cuerpo.</TextBlock>
+                        <TextBlock FontWeight="Bold" HorizontalAlignment="Center" FontSize="24" Foreground="Maroon">Pulsa ESPACIO para empezar</TextBlock>
+                        <Button Margin="20" Name="btnShowHighscoreList" Click="BtnShowHighscoreList_Click" HorizontalAlignment="Center" Padding="10,3">Ver récords...</Button>
+                    </StackPanel>
+                </Border>
+
+                <!-- Lista de récords: enlazada a HighScoreListViewSource -->
+                <Border BorderBrush="Silver" BorderThickness="2" Width="300" Height="300" Canvas.Left="50" Canvas.Top="50" Name="bdrHighscoreList" Panel.ZIndex="1" Visibility="Collapsed">
+                    <StackPanel Orientation="Vertical" Background="AliceBlue">
+                        <Border BorderThickness="0,0,0,2" BorderBrush="Silver" Margin="0,10">
+                            <TextBlock HorizontalAlignment="Center" FontSize="34" FontWeight="Bold">Lista de récords</TextBlock>
+                        </Border>
+                        <ItemsControl ItemsSource="{Binding Source={StaticResource HighScoreListViewSource}}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <DockPanel Margin="7">
+                                        <TextBlock Text="{Binding PlayerName}" DockPanel.Dock="Left" FontSize="22"></TextBlock>
+                                        <TextBlock Text="{Binding Score}" DockPanel.Dock="Right" FontSize="22" HorizontalAlignment="Right"></TextBlock>
+                                    </DockPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <!-- Volver al menú principal -->
+                        <Button Margin="12" Name="btnBackToMenuFromHighscores" Click="BtnBackToMenuFromHighscores_Click" HorizontalAlignment="Center" Padding="8,4">Volver</Button>
+                    </StackPanel>
+                </Border>
+
+                <!-- Diálogo para nuevo récord: se muestra solo cuando corresponde -->
+                <Border BorderBrush="Silver" BorderThickness="2" Width="300" Height="300" Canvas.Left="50" Canvas.Top="50" Name="bdrNewHighscore" Panel.ZIndex="1" Visibility="Collapsed">
+                    <StackPanel Orientation="Vertical" Background="AliceBlue">
+                        <TextBlock HorizontalAlignment="Center" FontSize="34" FontWeight="Bold" Margin="20">¡Nuevo récord!</TextBlock>
+                        <TextBlock HorizontalAlignment="Center" TextWrapping="Wrap" FontSize="16">  
+        ¡Felicidades! Has entrado en la lista de récords de SnakeWPF. Introduce tu nombre a continuación...
+                        </TextBlock>
+                        <TextBox Name="txtPlayerName" FontSize="28" FontWeight="Bold" MaxLength="8" Margin="20" HorizontalContentAlignment="Center"></TextBox>
+                        <Button Name="btnAddToHighscoreList" FontSize="16" HorizontalAlignment="Center" Click="BtnAddToHighscoreList_Click" Padding="10,5">Añadir a la lista</Button>
+                    </StackPanel>
+                </Border>
+
+                <!-- Diálogo de fin de partida -->
+                <Border BorderBrush="Silver" BorderThickness="2" Width="300" Height="300" Canvas.Left="50" Canvas.Top="50" Name="bdrEndOfGame" Panel.ZIndex="1" Visibility="Collapsed">
+                    <StackPanel Orientation="Vertical" Background="AliceBlue">
+                        <TextBlock HorizontalAlignment="Center" FontSize="40" FontWeight="Bold" Margin="0,20,0,0">¡Oh no!</TextBlock>
+                        <TextBlock HorizontalAlignment="Center" FontSize="26" FontWeight="Bold">...¡has muerto!</TextBlock>
+                        <TextBlock Margin="20" TextAlignment="Center" FontSize="16">Tu puntuación:</TextBlock>
+                        <TextBlock Name="tbFinalScore" TextAlignment="Center" FontSize="48" FontWeight="Bold" Foreground="Maroon">0</TextBlock>
+                        <TextBlock TextAlignment="Center" FontSize="16" Margin="20">Pulsa ESPACIO para empezar una nueva partida</TextBlock>
+                    </StackPanel>
+                </Border>
+            </Canvas>
+        </Border>
+    </DockPanel>
+</Window>
